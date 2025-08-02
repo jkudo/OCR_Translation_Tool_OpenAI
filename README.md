@@ -1,0 +1,2 @@
+# OCR_Translation_Tool_OpenAI
+OCR翻訳ツール
