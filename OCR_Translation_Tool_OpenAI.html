@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR翻訳ツール - OpenAI Version</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: none;
+            width: 100%;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            height: 100vh;
+            max-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.2em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            flex-shrink: 0;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-label {
+            display: inline-block;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .file-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 10px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .status.processing {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 8px 0;
+            flex-shrink: 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .model-select {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 2px solid #e0e0e0;
+            font-size: 14px;
+        }
+
+        .provider-select {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 2px solid #667eea;
+            font-size: 14px;
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .translation-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .translation-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .font-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .font-slider {
+            width: 200px;
+            height: 8px;
+            border-radius: 4px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .font-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+        }
+
+        .font-slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+        }
+
+        .translation-text {
+            font-size: 32px;
+            line-height: 1.8;
+            font-family: 'Georgia', 'Times New Roman', serif;
+            color: #2c3e50;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.05);
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .quick-button {
+            background: linear-gradient(45deg, #e67e22, #d35400);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .bottom-section {
+            margin-top: 15px;
+            flex-shrink: 0;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .api-config {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #e9ecef;
+        }
+
+        .api-config h3 {
+            color: #333;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1em;
+        }
+
+        .api-key-input {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .api-key-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .azure-inputs {
+            display: grid;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .azure-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .azure-input-group label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .preview-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .preview-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .preview-section h3 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1em;
+            text-align: center;
+        }
+
+        #capturedImage {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .text-area {
+            width: 100%;
+            min-height: 60px;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.4;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+            background: white;
+        }
+
+        .text-area:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .provider-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .provider-badge.openai {
+            background: #10a37f;
+            color: white;
+        }
+
+        .provider-badge.azure {
+            background: #0078d4;
+            color: white;
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .bottom-section {
+                max-height: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+                height: 100vh;
+                border-radius: 0;
+            }
+
+            .translation-section {
+                padding: 15px;
+            }
+
+            .preview-area {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+                margin-bottom: 15px;
+            }
+            
+            .translation-text {
+                font-size: 24px;
+                padding: 20px;
+            }
+
+            .font-controls {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .translation-controls {
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .bottom-section {
+                max-height: 180px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 8px;
+            }
+
+            .translation-section {
+                padding: 12px;
+            }
+
+            .translation-text {
+                font-size: 20px;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+                margin-bottom: 10px;
+            }
+
+            .controls {
+                gap: 8px;
+            }
+
+            .bottom-section {
+                max-height: 160px;
+                margin-top: 10px;
+            }
+
+            .api-config {
+                padding: 8px;
+                margin-bottom: 8px;
+            }
+
+            .preview-section {
+                padding: 8px;
+            }
+        }
+
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 25px;
+            }
+            
+            .translation-text {
+                font-size: 36px;
+                padding: 40px;
+            }
+
+            .bottom-section {
+                max-height: 240px;
+            }
+        }
+
+        @media (min-width: 1800px) {
+            .container {
+                max-width: 1600px;
+                padding: 30px;
+            }
+            
+            .translation-text {
+                font-size: 40px;
+                padding: 50px;
+            }
+
+            .bottom-section {
+                max-height: 260px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 OCR翻訳ツール - OpenAI Version</h1>
+        
+        <div class="controls">
+            <button onclick="captureScreen()" id="captureBtn">📷 画面キャプチャ</button>
+            <label for="fileInput" class="file-label">📁 画像ファイルを選択</label>
+            <input type="file" id="fileInput" class="file-input" accept="image/*">
+            
+            <select id="apiProvider" class="provider-select" onchange="switchProvider()">
+                <option value="openai">OpenAI</option>
+                <option value="azure">Azure OpenAI</option>
+            </select>
+            
+            <select id="visionModel" class="model-select">
+                <option value="o4-mini">o4-mini (推奨)</option>
+                <option value="o4-mini-high">o4-mini-high (高性能)</option>
+                <option value="gpt-4o">GPT-4o (最高精度)</option>
+                <option value="gpt-4o-mini">GPT-4o-mini (高速)</option>
+            </select>
+        </div>
+
+        <div id="status" class="status" style="display: none;"></div>
+        <div class="progress-bar" id="progressBar" style="display: none;">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="translation-section">
+            <div class="translation-controls">
+                <div class="font-controls">
+                    <span>フォントサイズ:</span>
+                    <span style="font-size: 12px;">小</span>
+                    <input type="range" id="fontSizeSlider" class="font-slider" min="24" max="56" value="32">
+                    <span style="font-size: 16px;">大</span>
+                    <span id="fontSizeDisplay" style="font-weight: bold; color: #667eea;">32px</span>
+                </div>
+                
+                <div class="quick-actions">
+                    <button class="quick-button" onclick="copyTranslation()">📋 コピー</button>
+                    <button class="quick-button" onclick="clearAll()">🗑️ クリア</button>
+                </div>
+            </div>
+            
+            <div class="translation-text" id="translationDisplay">
+                <div style="text-align: center; color: #7f8c8d; padding-top: 50px;">
+                    📚 上部の「画面キャプチャ」をクリックして画面をキャプチャしてください<br><br>
+                    <span style="font-size: 24px; color: #667eea;">✨ ここに美しい翻訳が大きく表示されます ✨</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-section">
+            <!-- OpenAI設定 -->
+            <div class="api-config" id="openaiConfig">
+                <h3>
+                    🔑 OpenAI API設定
+                    <span class="provider-badge openai">OpenAI</span>
+                </h3>
+                <input type="password" id="apiKey" class="api-key-input" placeholder="OpenAI APIキーを入力してください (sk-...)">
+            </div>
+
+            <!-- Azure OpenAI設定 -->
+            <div class="api-config" id="azureConfig" style="display: none;">
+                <h3>
+                    🔑 Azure OpenAI設定
+                    <span class="provider-badge azure">Azure</span>
+                </h3>
+                <div class="azure-inputs">
+                    <div class="azure-input-group">
+                        <label>エンドポイント URL</label>
+                        <input type="text" id="azureEndpoint" class="api-key-input" placeholder="https://your-resource.openai.azure.com">
+                    </div>
+                    <div class="azure-input-group">
+                        <label>APIキー</label>
+                        <input type="password" id="azureApiKey" class="api-key-input" placeholder="Azure OpenAI APIキー">
+                    </div>
+                    <div class="azure-input-group">
+                        <label>デプロイメント名</label>
+                        <input type="text" id="azureDeployment" class="api-key-input" placeholder="gpt-4o など">
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview-area">
+                <div class="preview-section">
+                    <h3>📷 キャプチャ画像</h3>
+                    <img id="capturedImage" style="display: none;" alt="キャプチャされた画像">
+                    <div id="imagePlaceholder" style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+                        画像が表示されます
+                    </div>
+                </div>
+
+                <div class="preview-section">
+                    <h3>📝 認識テキスト</h3>
+                    <textarea id="ocrResult" class="text-area" placeholder="認識されたテキスト..." readonly></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API設定の状態を保存
+        let apiKey = '';
+        let azureEndpoint = '';
+        let azureApiKey = '';
+        let azureDeployment = '';
+        let apiProvider = 'openai';
+
+        // 設定をローカルストレージに保存
+        function saveSettings() {
+            const settings = {
+                apiProvider: apiProvider,
+                apiKey: apiKey,
+                azureEndpoint: azureEndpoint,
+                azureApiKey: azureApiKey,
+                azureDeployment: azureDeployment,
+                lastModel: document.getElementById('visionModel').value
+            };
+            localStorage.setItem('ocrTranslatorSettings', JSON.stringify(settings));
+        }
+
+        // 設定をローカルストレージから読み込み
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('ocrTranslatorSettings');
+            if (savedSettings) {
+                try {
+                    const settings = JSON.parse(savedSettings);
+                    
+                    // プロバイダーを設定
+                    if (settings.apiProvider) {
+                        apiProvider = settings.apiProvider;
+                        document.getElementById('apiProvider').value = apiProvider;
+                        switchProvider();
+                    }
+                    
+                    // OpenAI設定を復元
+                    if (settings.apiKey) {
+                        apiKey = settings.apiKey;
+                        document.getElementById('apiKey').value = apiKey;
+                    }
+                    
+                    // Azure設定を復元
+                    if (settings.azureEndpoint) {
+                        azureEndpoint = settings.azureEndpoint;
+                        document.getElementById('azureEndpoint').value = azureEndpoint;
+                    }
+                    if (settings.azureApiKey) {
+                        azureApiKey = settings.azureApiKey;
+                        document.getElementById('azureApiKey').value = azureApiKey;
+                    }
+                    if (settings.azureDeployment) {
+                        azureDeployment = settings.azureDeployment;
+                        document.getElementById('azureDeployment').value = azureDeployment;
+                    }
+                    
+                    // モデル選択を復元
+                    if (settings.lastModel && apiProvider === 'openai') {
+                        document.getElementById('visionModel').value = settings.lastModel;
+                    }
+                    
+                    console.log('設定を復元しました');
+                } catch (e) {
+                    console.error('設定の復元に失敗しました:', e);
+                }
+            }
+        }
+
+        // API設定の入力を監視（自動保存付き）
+        document.getElementById('apiKey').addEventListener('input', function(e) {
+            apiKey = e.target.value.trim();
+            saveSettings();
+        });
+
+        document.getElementById('azureEndpoint').addEventListener('input', function(e) {
+            azureEndpoint = e.target.value.trim();
+            saveSettings();
+        });
+
+        document.getElementById('azureApiKey').addEventListener('input', function(e) {
+            azureApiKey = e.target.value.trim();
+            saveSettings();
+        });
+
+        document.getElementById('azureDeployment').addEventListener('input', function(e) {
+            azureDeployment = e.target.value.trim();
+            saveSettings();
+        });
+
+        // モデル選択の変更を監視
+        document.getElementById('visionModel').addEventListener('change', function(e) {
+            saveSettings();
+        });
+
+        // プロバイダー切り替え
+        function switchProvider() {
+            const provider = document.getElementById('apiProvider');
+            apiProvider = provider.value;
+            
+            const openaiConfig = document.getElementById('openaiConfig');
+            const azureConfig = document.getElementById('azureConfig');
+            const modelSelect = document.getElementById('visionModel');
+            
+            if (apiProvider === 'azure') {
+                openaiConfig.style.display = 'none';
+                azureConfig.style.display = 'block';
+                modelSelect.style.display = 'none';
+            } else {
+                openaiConfig.style.display = 'block';
+                azureConfig.style.display = 'none';
+                modelSelect.style.display = 'inline-block';
+            }
+            
+            // プロバイダー変更時も設定を保存
+            saveSettings();
+        }
+
+        // フォントサイズスライダーの処理
+        document.getElementById('fontSizeSlider').addEventListener('input', function(e) {
+            const fontSize = e.target.value;
+            document.getElementById('translationDisplay').style.fontSize = fontSize + 'px';
+            document.getElementById('fontSizeDisplay').textContent = fontSize + 'px';
+        });
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+            status.style.display = 'block';
+        }
+
+        function updateProgress(percentage) {
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            
+            if (percentage > 0) {
+                progressBar.style.display = 'block';
+                progressFill.style.width = percentage + '%';
+            } else {
+                progressBar.style.display = 'none';
+            }
+        }
+
+        async function captureScreen() {
+            // API設定の検証
+            if (apiProvider === 'openai' && (!apiKey || !apiKey.startsWith('sk-'))) {
+                showStatus('OpenAI APIキーを入力してください', 'error');
+                return;
+            }
+            
+            if (apiProvider === 'azure' && (!azureEndpoint || !azureApiKey || !azureDeployment)) {
+                showStatus('Azure OpenAI の設定を全て入力してください', 'error');
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        mediaSource: 'screen',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        frameRate: { ideal: 1 }
+                    },
+                    audio: false
+                });
+
+                showStatus('キャプチャ中...', 'processing');
+                updateProgress(10);
+
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+
+                video.addEventListener('loadedmetadata', function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0);
+                    
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    const imageDataUrl = canvas.toDataURL('image/png', 0.8);
+                    displayImage(imageDataUrl);
+                    processImageWithOpenAI(imageDataUrl);
+                });
+
+            } catch (error) {
+                console.error('キャプチャエラー:', error);
+                showStatus('画面キャプチャに失敗しました', 'error');
+                updateProgress(0);
+            }
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            // API設定の検証
+            if (apiProvider === 'openai' && (!apiKey || !apiKey.startsWith('sk-'))) {
+                showStatus('OpenAI APIキーを入力してください', 'error');
+                return;
+            }
+            
+            if (apiProvider === 'azure' && (!azureEndpoint || !azureApiKey || !azureDeployment)) {
+                showStatus('Azure OpenAI の設定を全て入力してください', 'error');
+                return;
+            }
+
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    displayImage(e.target.result);
+                    processImageWithOpenAI(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function displayImage(url) {
+            const img = document.getElementById('capturedImage');
+            const placeholder = document.getElementById('imagePlaceholder');
+            
+            img.src = url;
+            img.style.display = 'block';
+            placeholder.style.display = 'none';
+        }
+
+        async function processImageWithOpenAI(imageDataUrl) {
+            try {
+                showStatus('画像を解析中...', 'processing');
+                updateProgress(20);
+
+                const model = document.getElementById('visionModel').value;
+                let apiUrl;
+                let headers;
+                let requestBody;
+
+                if (apiProvider === 'azure') {
+                    // Azure OpenAI API
+                    apiUrl = `${azureEndpoint}/openai/deployments/${azureDeployment}/chat/completions?api-version=2024-02-15-preview`;
+                    headers = {
+                        'api-key': azureApiKey,
+                        'Content-Type': 'application/json'
+                    };
+                    requestBody = {
+                        messages: [
+                            {
+                                role: "user",
+                                content: [
+                                    {
+                                        type: "text",
+                                        text: "この画像に含まれているテキストを読み取り、以下の形式で応答してください：\n\n【原文】\n（画像から読み取ったテキストをそのまま、改行や段落も保持して記載）\n\n【日本語翻訳】\n（読みやすく自然な日本語に翻訳）\n\n注意事項：\n- 全てのテキストを漏れなく読み取ってください\n- 原文の段落構造や改行を保持してください\n- 翻訳は自然で読みやすい日本語にしてください\n- 固有名詞や専門用語は適切に処理してください"
+                                    },
+                                    {
+                                        type: "image_url",
+                                        image_url: {
+                                            url: imageDataUrl,
+                                            detail: "high"
+                                        }
+                                    }
+                                ]
+                            }
+                        ],
+                        max_tokens: 2000,
+                        temperature: 0.1
+                    };
+                } else {
+                    // OpenAI API
+                    apiUrl = 'https://api.openai.com/v1/chat/completions';
+                    headers = {
+                        'Authorization': 'Bearer ' + apiKey,
+                        'Content-Type': 'application/json'
+                    };
+                    requestBody = {
+                        model: model,
+                        messages: [
+                            {
+                                role: "user",
+                                content: [
+                                    {
+                                        type: "text",
+                                        text: "この画像に含まれているテキストを読み取り、以下の形式で応答してください：\n\n【原文】\n（画像から読み取ったテキストをそのまま、改行や段落も保持して記載）\n\n【日本語翻訳】\n（読みやすく自然な日本語に翻訳）\n\n注意事項：\n- 全てのテキストを漏れなく読み取ってください\n- 原文の段落構造や改行を保持してください\n- 翻訳は自然で読みやすい日本語にしてください\n- 固有名詞や専門用語は適切に処理してください"
+                                    },
+                                    {
+                                        type: "image_url",
+                                        image_url: {
+                                            url: imageDataUrl,
+                                            detail: "high"
+                                        }
+                                    }
+                                ]
+                            }
+                        ],
+                        max_tokens: 2000,
+                        temperature: 0.1
+                    };
+                }
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(requestBody)
+                });
+
+                updateProgress(70);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error('API Error: ' + (errorData.error ? errorData.error.message : 'Unknown error'));
+                }
+
+                const data = await response.json();
+                const result = data.choices[0].message.content;
+
+                updateProgress(90);
+
+                const originalMatch = result.match(/【原文】\s*\n([\s\S]*?)(?=\n【日本語翻訳】|$)/);
+                const translationMatch = result.match(/【日本語翻訳】\s*\n([\s\S]*?)$/);
+
+                const originalText = originalMatch ? originalMatch[1].trim() : '認識できませんでした';
+                const translatedText = translationMatch ? translationMatch[1].trim() : '翻訳できませんでした';
+
+                document.getElementById('translationDisplay').innerHTML = '<div style="line-height: 1.8;">' + translatedText.replace(/\n/g, '<br><br>') + '</div>';
+                document.getElementById('ocrResult').value = originalText;
+
+                window.lastOriginalText = originalText;
+                window.lastTranslatedText = translatedText;
+
+                updateProgress(100);
+                showStatus('翻訳完了！', 'success');
+
+                setTimeout(function() {
+                    updateProgress(0);
+                }, 2000);
+
+            } catch (error) {
+                console.error('API エラー:', error);
+                let errorMessage = 'API処理でエラーが発生しました';
+                
+                if (error.message.includes('401')) {
+                    errorMessage = 'APIキーが無効です';
+                } else if (error.message.includes('429')) {
+                    errorMessage = 'API利用制限に達しました';
+                } else if (error.message.includes('insufficient_quota')) {
+                    errorMessage = 'APIクォータが不足しています';
+                }
+                
+                showStatus(errorMessage, 'error');
+                updateProgress(0);
+            }
+        }
+
+        function copyTranslation() {
+            if (window.lastTranslatedText) {
+                navigator.clipboard.writeText(window.lastTranslatedText).then(function() {
+                    showStatus('翻訳をコピーしました', 'success');
+                    setTimeout(function() {
+                        document.getElementById('status').style.display = 'none';
+                    }, 2000);
+                });
+            } else {
+                showStatus('コピーする翻訳がありません', 'error');
+                setTimeout(function() {
+                    document.getElementById('status').style.display = 'none';
+                }, 2000);
+            }
+        }
+
+        function clearAll() {
+            document.getElementById('translationDisplay').innerHTML = '<div style="text-align: center; color: #7f8c8d; padding-top: 50px;">📚 上部の「画面キャプチャ」をクリックして画面をキャプチャしてください<br><br><span style="font-size: 24px; color: #667eea;">✨ ここに美しい翻訳が大きく表示されます ✨</span></div>';
+            document.getElementById('translationDisplay').style.fontSize = '32px';
+            document.getElementById('fontSizeSlider').value = 32;
+            document.getElementById('fontSizeDisplay').textContent = '32px';
+            
+            document.getElementById('capturedImage').style.display = 'none';
+            document.getElementById('imagePlaceholder').style.display = 'block';
+            document.getElementById('ocrResult').value = '';
+            
+            window.lastOriginalText = '';
+            window.lastTranslatedText = '';
+            
+            showStatus('画面をクリアしました', 'success');
+            setTimeout(function() {
+                document.getElementById('status').style.display = 'none';
+            }, 2000);
+        }
+
+        function setupDragAndDrop() {
+            const dropZone = document.querySelector('.translation-section');
+
+            if (dropZone) {
+                dropZone.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    dropZone.style.background = 'rgba(102, 126, 234, 0.2)';
+                });
+
+                dropZone.addEventListener('dragleave', function(e) {
+                    e.preventDefault();
+                    dropZone.style.background = 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)';
+                });
+
+                dropZone.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    dropZone.style.background = 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)';
+                    
+                    // API設定の検証
+                    if (apiProvider === 'openai' && (!apiKey || !apiKey.startsWith('sk-'))) {
+                        showStatus('OpenAI APIキーを入力してください', 'error');
+                        return;
+                    }
+                    
+                    if (apiProvider === 'azure' && (!azureEndpoint || !azureApiKey || !azureDeployment)) {
+                        showStatus('Azure OpenAI の設定を全て入力してください', 'error');
+                        return;
+                    }
+                    
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0 && files[0].type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            displayImage(e.target.result);
+                            processImageWithOpenAI(e.target.result);
+                        };
+                        reader.readAsDataURL(files[0]);
+                    }
+                });
+            }
+        }
+
+        function handleResize() {
+            const translationSection = document.querySelector('.translation-section');
+            const bottomSection = document.querySelector('.bottom-section');
+            
+            if (translationSection && bottomSection) {
+                const bottomHeight = bottomSection.scrollHeight;
+                const maxBottomHeight = Math.min(bottomHeight, 220);
+                bottomSection.style.maxHeight = maxBottomHeight + 'px';
+            }
+        }
+
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', handleResize);
+
+        // キーボードショートカット
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                captureScreen();
+            } else if (e.ctrlKey && e.key === 'c' && e.shiftKey) {
+                e.preventDefault();
+                copyTranslation();
+            } else if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                clearAll();
+            }
+        });
+
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 保存された設定を読み込み
+            loadSettings();
+            
+            // ブラウザの画面キャプチャAPIサポートチェック
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                document.getElementById('captureBtn').disabled = true;
+                document.getElementById('captureBtn').textContent = '❌ 画面キャプチャ非対応';
+            }
+
+            setupDragAndDrop();
+            handleResize();
+
+            // 初期メッセージ表示
+            setTimeout(function() {
+                showStatus('💡 APIプロバイダーを選択して設定を入力し、「画面キャプチャ」をクリックしてください', 'processing');
+                setTimeout(function() {
+                    document.getElementById('status').style.display = 'none';
+                }, 4000);
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
