@@ -1,5 +1,7 @@
 # OCR翻訳ツール - OpenAI Version
 
+本リポジトリのコードの一部は、Claudeなどの生成AIを利用して作成しています。
+
 画面キャプチャや画像ファイルから文字を認識し、自動翻訳するWebアプリケーションです。OpenAI VisionおよびAzure OpenAIに対応しています。
 
 <img width="40%" height="40%" alt="image" src="https://github.com/user-attachments/assets/dc41bd22-d1eb-430e-906e-270dd2de1bc3" />
