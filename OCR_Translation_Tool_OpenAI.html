@@ -837,6 +837,9 @@
             try {
                 showStatus('画像を解析中...', 'processing');
                 updateProgress(20);
+                
+                // 処理開始時に翻訳エリアのスクロールを上部に移動
+                document.getElementById('translationDisplay').scrollTop = 0;
 
                 const model = document.getElementById('visionModel').value;
                 let apiUrl;
@@ -931,6 +934,16 @@
                 document.getElementById('translationDisplay').innerHTML = '<div style="line-height: 1.8;">' + translatedText.replace(/\n/g, '<br><br>') + '</div>';
                 document.getElementById('ocrResult').value = originalText;
 
+                // 翻訳結果表示エリアのスクロールを一番上に移動
+                document.getElementById('translationDisplay').scrollTop = 0;
+                document.getElementById('ocrResult').scrollTop = 0;
+                
+                // DOM更新後に確実にスクロールするため、少し遅延を入れる
+                setTimeout(function() {
+                    document.getElementById('translationDisplay').scrollTop = 0;
+                    document.getElementById('ocrResult').scrollTop = 0;
+                }, 100);
+
                 window.lastOriginalText = originalText;
                 window.lastTranslatedText = translatedText;
 
@@ -979,6 +992,10 @@
             document.getElementById('translationDisplay').style.fontSize = '32px';
             document.getElementById('fontSizeSlider').value = 32;
             document.getElementById('fontSizeDisplay').textContent = '32px';
+            
+            // スクロールを一番上に戻す
+            document.getElementById('translationDisplay').scrollTop = 0;
+            document.getElementById('ocrResult').scrollTop = 0;
             
             document.getElementById('capturedImage').style.display = 'none';
             document.getElementById('imagePlaceholder').style.display = 'block';
