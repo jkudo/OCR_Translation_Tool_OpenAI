@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OCR翻訳ツール - OpenAI Version</title>
+    <!--
+    ============================================================================
+    OCR Translation Tool - OpenAI Version
+    
+    このツールは一部生成AI（Claude）を使用して作成されています。
+    This tool was partially created using generative AI (Claude).
+    
+    GitHub: https://github.com/jkudo/OCR_Translation_Tool_OpenAI
+    ============================================================================
+    -->
     <style>
         * {
             margin: 0;
@@ -608,6 +618,21 @@
     </div>
 
     <script>
+        /**
+         * ============================================================================
+         * OCR Translation Tool - JavaScript Implementation
+         * 
+         * このJavaScriptコードは一部生成AI（Claude）を使用して作成されています。
+         * This JavaScript code was partially created using generative AI (Claude).
+         * 
+         * 主な機能:
+         * - 画面キャプチャとOCR処理
+         * - OpenAI/Azure OpenAI APIとの連携
+         * - 設定の自動保存と復元
+         * - リアルタイム翻訳表示
+         * ============================================================================
+         */
+        
         // API設定の状態を保存
         let apiKey = '';
         let azureEndpoint = '';
@@ -625,21 +650,27 @@
                 azureDeployment: azureDeployment,
                 lastModel: document.getElementById('visionModel').value
             };
-            localStorage.setItem('ocrTranslatorSettings', JSON.stringify(settings));
+            try {
+                localStorage.setItem('ocrTranslatorSettings', JSON.stringify(settings));
+                console.log('設定を保存しました:', settings);
+            } catch (e) {
+                console.error('設定の保存に失敗しました:', e);
+            }
         }
 
         // 設定をローカルストレージから読み込み
         function loadSettings() {
-            const savedSettings = localStorage.getItem('ocrTranslatorSettings');
-            if (savedSettings) {
-                try {
+            try {
+                const savedSettings = localStorage.getItem('ocrTranslatorSettings');
+                console.log('保存された設定:', savedSettings);
+                
+                if (savedSettings) {
                     const settings = JSON.parse(savedSettings);
                     
                     // プロバイダーを設定
                     if (settings.apiProvider) {
                         apiProvider = settings.apiProvider;
                         document.getElementById('apiProvider').value = apiProvider;
-                        switchProvider();
                     }
                     
                     // OpenAI設定を復元
@@ -667,37 +698,69 @@
                         document.getElementById('visionModel').value = settings.lastModel;
                     }
                     
+                    // プロバイダーに応じて表示を切り替え
+                    switchProvider();
+                    
                     console.log('設定を復元しました');
-                } catch (e) {
-                    console.error('設定の復元に失敗しました:', e);
+                    return true;
                 }
+            } catch (e) {
+                console.error('設定の復元に失敗しました:', e);
             }
+            return false;
         }
 
-        // API設定の入力を監視（自動保存付き）
-        document.getElementById('apiKey').addEventListener('input', function(e) {
-            apiKey = e.target.value.trim();
-            saveSettings();
-        });
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            // まず設定を読み込み
+            const settingsLoaded = loadSettings();
+            
+            // イベントリスナーを設定
+            document.getElementById('apiKey').addEventListener('input', function(e) {
+                apiKey = e.target.value.trim();
+                saveSettings();
+            });
 
-        document.getElementById('azureEndpoint').addEventListener('input', function(e) {
-            azureEndpoint = e.target.value.trim();
-            saveSettings();
-        });
+            document.getElementById('azureEndpoint').addEventListener('input', function(e) {
+                azureEndpoint = e.target.value.trim();
+                saveSettings();
+            });
 
-        document.getElementById('azureApiKey').addEventListener('input', function(e) {
-            azureApiKey = e.target.value.trim();
-            saveSettings();
-        });
+            document.getElementById('azureApiKey').addEventListener('input', function(e) {
+                azureApiKey = e.target.value.trim();
+                saveSettings();
+            });
 
-        document.getElementById('azureDeployment').addEventListener('input', function(e) {
-            azureDeployment = e.target.value.trim();
-            saveSettings();
-        });
+            document.getElementById('azureDeployment').addEventListener('input', function(e) {
+                azureDeployment = e.target.value.trim();
+                saveSettings();
+            });
 
-        // モデル選択の変更を監視
-        document.getElementById('visionModel').addEventListener('change', function(e) {
-            saveSettings();
+            // モデル選択の変更を監視
+            document.getElementById('visionModel').addEventListener('change', function(e) {
+                saveSettings();
+            });
+            
+            // ブラウザの画面キャプチャAPIサポートチェック
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                document.getElementById('captureBtn').disabled = true;
+                document.getElementById('captureBtn').textContent = '❌ 画面キャプチャ非対応';
+            }
+
+            setupDragAndDrop();
+            handleResize();
+
+            // 初期メッセージ表示
+            setTimeout(function() {
+                if (settingsLoaded) {
+                    showStatus('💡 設定を復元しました。画面キャプチャまたは画像ファイルを選択してください', 'success');
+                } else {
+                    showStatus('💡 APIプロバイダーを選択して設定を入力し、「画面キャプチャ」をクリックしてください', 'processing');
+                }
+                setTimeout(function() {
+                    document.getElementById('status').style.display = 'none';
+                }, 4000);
+            }, 1000);
         });
 
         // プロバイダー切り替え
